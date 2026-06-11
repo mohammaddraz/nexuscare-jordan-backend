@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const asyncHandler = require('express-async-handler');
-const pool = require('../config/db');
+const pgclient = require('../config/db');
 
 /**
  * Middleware to protect routes by verifying JWT token
@@ -18,7 +18,7 @@ const protect = asyncHandler(async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
 
       // Get user from database (excluding password)
-      const userResult = await pool.query(
+      const userResult = await pgclient.query(
         'SELECT id, email, role FROM USERS WHERE id = $1',
         [decoded.id]
       );

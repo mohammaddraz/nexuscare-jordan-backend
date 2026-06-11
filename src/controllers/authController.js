@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const asyncHandler = require('express-async-handler');
-const pool = require('../config/db');
+const pgclient = require('../config/db');
 
 /**
  * Generate JWT Token
@@ -26,7 +26,7 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   // 1. Check if user exists
-  const userResult = await pool.query('SELECT * FROM USERS WHERE email = $1', [email]);
+  const userResult = await pgclient.query('SELECT * FROM USERS WHERE email = $1', [email]);
   
   if (userResult.rows.length === 0) {
     res.status(401);
@@ -47,19 +47,19 @@ const loginUser = asyncHandler(async (req, res) => {
   let profileDetails = {};
   
   if (user.role === 'ADMIN') {
-    const result = await pool.query('SELECT * FROM ADMINS WHERE user_id = $1', [user.id]);
+    const result = await pgclient.query('SELECT * FROM ADMINS WHERE user_id = $1', [user.id]);
     profileDetails = result.rows[0];
     
     // Update last login
-    await pool.query('UPDATE ADMINS SET last_login = CURRENT_TIMESTAMP WHERE user_id = $1', [user.id]);
+    await pgclient.query('UPDATE ADMINS SET last_login = CURRENT_TIMESTAMP WHERE user_id = $1', [user.id]);
   } 
   else if (user.role === 'PROVIDER') {
-    const result = await pool.query('SELECT * FROM PROVIDERS WHERE user_id = $1', [user.id]);
+    const result = await pgclient.query('SELECT * FROM PROVIDERS WHERE user_id = $1', [user.id]);
     profileDetails = result.rows[0];
   } 
   else if (user.role === 'CONSUMER') {
     // For consumers, we fetch the primary patient record
-    const result = await pool.query(
+    const result = await pgclient.query(
       'SELECT * FROM PATIENTS WHERE user_id = $1 AND relation = $2', 
       [user.id, 'Primary']
     );

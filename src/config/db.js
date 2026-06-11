@@ -1,7 +1,7 @@
-const { Pool } = require('pg');
+const { Client } = require('pg');
 require('dotenv').config();
 
-const pool = new Pool({
+const pgclient = new Client({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
   database: process.env.DB_DATABASE,
@@ -9,11 +9,11 @@ const pool = new Pool({
   port: process.env.DB_PORT,
 });
 
-pool.on('error', (err, client) => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
-});
+pgclient.connect()
+  .then(() => console.log('✅ Connected to PostgreSQL'))
+  .catch((err) => {
+    console.error('❌ PostgreSQL connection error:', err);
+    process.exit(-1);
+  });
 
-module.exports = {
-  query: (text, params) => pool.query(text, params),
-};
+module.exports = pgclient;
