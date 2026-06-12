@@ -165,6 +165,58 @@ const getProviderDirectory = asyncHandler(async (req, res) => {
   res.json(result.rows);
 });
 
+/**
+ * @desc    Get all coverage modification requests
+ * @route   GET /api/admin/coverage-requests
+ * @access  Private (ADMIN)
+ */
+const getCoverageRequests = asyncHandler(async (req, res) => {
+  const result = await pgclient.query(
+    `SELECT cr.*, pat.name AS patient_name, u.email AS consumer_email
+     FROM COVERAGE_REQUESTS cr
+     JOIN PATIENTS pat ON pat.id = cr.patient_id
+     JOIN USERS u ON u.id = cr.user_id
+     ORDER BY cr.date_requested DESC`
+  );
+  res.json(result.rows);
+});
+
+/**
+ * @desc    Approve or reject a coverage modification request
+ * @route   PUT /api/admin/coverage-requests/:id
+ * @access  Private (ADMIN)
+ */
+const updateCoverageRequest = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status, admin_notes } = req.body;
+
+  if (!['Approved', 'Rejected'].includes(status)) {
+    res.status(400);
+    throw new Error('Status must be Approved or Rejected');
+  }
+
+  const result = await pgclient.query(
+    `UPDATE COVERAGE_REQUESTS SET status = $1, admin_notes = $2, date_reviewed = CURRENT_TIMESTAMP
+     WHERE id = $3 RETURNING *`,
+    [status, admin_notes || null, id]
+  );
+
+  if (result.rows.length === 0) {
+    res.status(404);
+    throw new Error('Coverage request not found');
+  }
+
+  // If approved, update the patient's plan_type
+  if (status === 'Approved') {
+    await pgclient.query(
+      'UPDATE PATIENTS SET plan_type = $1 WHERE id = $2',
+      [result.rows[0].requested_plan, result.rows[0].patient_id]
+    );
+  }
+
+  res.json(result.rows[0]);
+});
+
 module.exports = {
   getDashboardStats,
   getPendingConsumers,
@@ -173,4 +225,6 @@ module.exports = {
   updateCertification,
   getAdmins,
   getProviderDirectory,
+  getCoverageRequests,
+  updateCoverageRequest,
 };

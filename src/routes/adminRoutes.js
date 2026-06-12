@@ -9,6 +9,8 @@ const {
   updateCertification,
   getAdmins,
   getProviderDirectory,
+  getCoverageRequests,
+  updateCoverageRequest,
 } = require('../controllers/adminController');
 
 // All admin routes require authentication + ADMIN role
@@ -35,5 +37,11 @@ router.get('/admins', getAdmins);
 
 // GET /api/admin/providers
 router.get('/providers', getProviderDirectory);
+
+// GET /api/admin/coverage-requests
+router.get('/coverage-requests', getCoverageRequests);
+
+// PUT /api/admin/coverage-requests/:id
+router.put('/coverage-requests/:id', updateCoverageRequest);
 
 module.exports = router;

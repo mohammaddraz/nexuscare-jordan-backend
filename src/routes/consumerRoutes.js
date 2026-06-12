@@ -8,6 +8,8 @@ const {
   getMedicalRecords,
   getClaims,
   getPCPHistory,
+  submitCoverageRequest,
+  getCoverageRequests,
 } = require('../controllers/consumerController');
 
 // All consumer routes require authentication + CONSUMER role
@@ -31,5 +33,11 @@ router.get('/records/:patientId', getMedicalRecords);
 
 // GET /api/consumers/claims/:patientId
 router.get('/claims/:patientId', getClaims);
+
+// POST /api/consumers/coverage-request
+router.post('/coverage-request', submitCoverageRequest);
+
+// GET /api/consumers/coverage-requests
+router.get('/coverage-requests', getCoverageRequests);
 
 module.exports = router;
