@@ -148,6 +148,40 @@ const submitClaim = asyncHandler(async (req, res) => {
     throw new Error('Patient ID and amount are required');
   }
 
+  // Verify patient exists and get their network
+  const patientCheck = await pgclient.query(
+    'SELECT insurance_company_id, network_tier FROM PATIENTS WHERE id = $1',
+    [patient_id]
+  );
+
+  if (patientCheck.rows.length === 0) {
+    res.status(404);
+    throw new Error('Patient not found');
+  }
+
+  const patient = patientCheck.rows[0];
+
+  // Verify network
+  const networkCheck = await pgclient.query(
+    `SELECT accepted_tier FROM PROVIDER_NETWORKS 
+     WHERE provider_id = $1 AND company_id = $2`,
+    [req.user.id, patient.insurance_company_id]
+  );
+
+  if (networkCheck.rows.length === 0) {
+    res.status(403);
+    throw new Error('Cannot submit claim: Out of network for this patient.');
+  }
+
+  const providerTier = networkCheck.rows[0].accepted_tier;
+  const patientTier = patient.network_tier;
+  const tierValue = { 'Premium': 3, 'Standard': 2, 'Basic': 1 };
+  
+  if (tierValue[providerTier] > tierValue[patientTier]) {
+    res.status(403);
+    throw new Error(`Cannot submit claim: This provider requires a ${providerTier} network tier. Patient is ${patientTier}.`);
+  }
+
   const result = await pgclient.query(
     `INSERT INTO CLAIMS (patient_id, provider_id, claim_date, claim_type, billing_code, amount, deductible_applied)
      VALUES ($1, $2, CURRENT_DATE, $3, $4, $5, $6) RETURNING *`,
@@ -166,10 +200,14 @@ const verifyCoverage = asyncHandler(async (req, res) => {
   const { nationalId } = req.params;
 
   const result = await pgclient.query(
-    `SELECT name, plan_type, approval_status 
-     FROM PATIENTS 
-     WHERE national_id = $1`,
-    [nationalId]
+    `SELECT p.id, p.name, p.plan_type, p.approval_status, p.insurance_company_id, p.network_tier,
+            ic.name AS insurance_company_name,
+            (SELECT accepted_tier FROM PROVIDER_NETWORKS pn 
+             WHERE pn.provider_id = $2 AND pn.company_id = p.insurance_company_id) AS provider_tier
+     FROM PATIENTS p
+     LEFT JOIN INSURANCE_COMPANIES ic ON ic.id = p.insurance_company_id
+     WHERE p.national_id = $1`,
+    [nationalId, req.user.id]
   );
 
   if (result.rows.length === 0) {
@@ -177,7 +215,22 @@ const verifyCoverage = asyncHandler(async (req, res) => {
     throw new Error('Patient not found');
   }
 
-  res.json(result.rows[0]);
+  const patient = result.rows[0];
+  let networkStatus = 'Out-of-Network';
+  
+  if (patient.provider_tier) {
+    const tierValue = { 'Premium': 3, 'Standard': 2, 'Basic': 1 };
+    if (tierValue[patient.provider_tier] <= tierValue[patient.network_tier]) {
+      networkStatus = 'In-Network';
+    } else {
+      networkStatus = `Tier Mismatch (Provider: ${patient.provider_tier}, Patient: ${patient.network_tier})`;
+    }
+  }
+
+  res.json({
+    ...patient,
+    network_status: networkStatus
+  });
 });
 
 module.exports = {
