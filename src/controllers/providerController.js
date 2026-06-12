@@ -1,5 +1,5 @@
 const asyncHandler = require('express-async-handler');
-const pool = require('../config/db');
+const pgclient = require('../config/db');
 const { sendPCPStatusEmail } = require('../services/emailService');
 
 /**
@@ -8,7 +8,7 @@ const { sendPCPStatusEmail } = require('../services/emailService');
  * @access  Private (PROVIDER)
  */
 const getPendingAssignments = asyncHandler(async (req, res) => {
-  const result = await pool.query(
+  const result = await pgclient.query(
     `SELECT pca.*, 
             pat.name AS patient_name, 
             pat.relation, 
@@ -39,7 +39,7 @@ const updateAssignmentStatus = asyncHandler(async (req, res) => {
   }
 
   // Verify the assignment belongs to this provider
-  const assignmentCheck = await pool.query(
+  const assignmentCheck = await pgclient.query(
     'SELECT * FROM PCP_ASSIGNMENTS WHERE id = $1 AND provider_id = $2',
     [id, req.user.id]
   );
@@ -50,13 +50,13 @@ const updateAssignmentStatus = asyncHandler(async (req, res) => {
   }
 
   // Update the status
-  const result = await pool.query(
+  const result = await pgclient.query(
     'UPDATE PCP_ASSIGNMENTS SET status = $1 WHERE id = $2 RETURNING *',
     [status, id]
   );
 
   // Get patient + consumer email for notification
-  const patientInfo = await pool.query(
+  const patientInfo = await pgclient.query(
     `SELECT pat.name AS patient_name, u.email 
      FROM PATIENTS pat
      JOIN USERS u ON u.id = pat.user_id
@@ -65,7 +65,7 @@ const updateAssignmentStatus = asyncHandler(async (req, res) => {
   );
 
   // Get provider name
-  const providerInfo = await pool.query(
+  const providerInfo = await pgclient.query(
     'SELECT name FROM PROVIDERS WHERE user_id = $1',
     [req.user.id]
   );
@@ -89,7 +89,7 @@ const updateAssignmentStatus = asyncHandler(async (req, res) => {
  * @access  Private (PROVIDER)
  */
 const getMyPatients = asyncHandler(async (req, res) => {
-  const result = await pool.query(
+  const result = await pgclient.query(
     `SELECT pat.*, pca.status AS assignment_status, pca.date_requested
      FROM PCP_ASSIGNMENTS pca
      JOIN PATIENTS pat ON pat.id = pca.patient_id
@@ -115,7 +115,7 @@ const submitClinicalLog = asyncHandler(async (req, res) => {
   }
 
   // Verify this patient is assigned to this provider
-  const check = await pool.query(
+  const check = await pgclient.query(
     `SELECT id FROM PCP_ASSIGNMENTS 
      WHERE patient_id = $1 AND provider_id = $2 AND status = 'Approved'`,
     [patient_id, req.user.id]
@@ -126,7 +126,7 @@ const submitClinicalLog = asyncHandler(async (req, res) => {
     throw new Error('Patient is not assigned to you');
   }
 
-  const result = await pool.query(
+  const result = await pgclient.query(
     `INSERT INTO MEDICAL_RECORDS (patient_id, provider_id, record_date, diagnosis, icd_code, prescription, notes)
      VALUES ($1, $2, CURRENT_DATE, $3, $4, $5, $6) RETURNING *`,
     [patient_id, req.user.id, diagnosis, icd_code, prescription, notes]
@@ -148,7 +148,7 @@ const submitClaim = asyncHandler(async (req, res) => {
     throw new Error('Patient ID and amount are required');
   }
 
-  const result = await pool.query(
+  const result = await pgclient.query(
     `INSERT INTO CLAIMS (patient_id, provider_id, claim_date, claim_type, billing_code, amount, deductible_applied)
      VALUES ($1, $2, CURRENT_DATE, $3, $4, $5, $6) RETURNING *`,
     [patient_id, req.user.id, claim_type, billing_code, amount, deductible_applied || 0]
@@ -165,7 +165,7 @@ const submitClaim = asyncHandler(async (req, res) => {
 const verifyCoverage = asyncHandler(async (req, res) => {
   const { nationalId } = req.params;
 
-  const result = await pool.query(
+  const result = await pgclient.query(
     `SELECT name, plan_type, approval_status 
      FROM PATIENTS 
      WHERE national_id = $1`,

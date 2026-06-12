@@ -1,5 +1,5 @@
 const asyncHandler = require('express-async-handler');
-const pool = require('../config/db');
+const pgclient = require('../config/db');
 const { sendWelcomeEmail } = require('../services/emailService');
 
 /**
@@ -9,11 +9,11 @@ const { sendWelcomeEmail } = require('../services/emailService');
  */
 const getDashboardStats = asyncHandler(async (req, res) => {
   const [patients, providers, claims, pendingAssignments, pendingConsumers] = await Promise.all([
-    pool.query('SELECT COUNT(*) FROM PATIENTS WHERE approval_status = $1', ['Approved']),
-    pool.query('SELECT COUNT(*) FROM PROVIDERS'),
-    pool.query('SELECT COUNT(*) FROM CLAIMS'),
-    pool.query("SELECT COUNT(*) FROM PCP_ASSIGNMENTS WHERE status = 'Pending'"),
-    pool.query("SELECT COUNT(*) FROM PATIENTS WHERE approval_status = 'Pending'"),
+    pgclient.query('SELECT COUNT(*) FROM PATIENTS WHERE approval_status = $1', ['Approved']),
+    pgclient.query('SELECT COUNT(*) FROM PROVIDERS'),
+    pgclient.query('SELECT COUNT(*) FROM CLAIMS'),
+    pgclient.query("SELECT COUNT(*) FROM PCP_ASSIGNMENTS WHERE status = 'Pending'"),
+    pgclient.query("SELECT COUNT(*) FROM PATIENTS WHERE approval_status = 'Pending'"),
   ]);
 
   res.json({
@@ -31,7 +31,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
  * @access  Private (ADMIN)
  */
 const getPendingConsumers = asyncHandler(async (req, res) => {
-  const result = await pool.query(
+  const result = await pgclient.query(
     `SELECT p.id, p.name, p.national_id, p.plan_type, p.relation, p.approval_status,
             u.email, u.created_at AS date_signed_up,
             (SELECT COUNT(*) FROM PATIENTS p2 WHERE p2.user_id = p.user_id) AS family_size
@@ -58,7 +58,7 @@ const approveConsumer = asyncHandler(async (req, res) => {
     throw new Error('Status must be Approved or Rejected');
   }
 
-  const result = await pool.query(
+  const result = await pgclient.query(
     'UPDATE PATIENTS SET approval_status = $1 WHERE id = $2 RETURNING *',
     [status, patientId]
   );
@@ -70,7 +70,7 @@ const approveConsumer = asyncHandler(async (req, res) => {
 
   // If approved, send welcome email
   if (status === 'Approved') {
-    const userInfo = await pool.query(
+    const userInfo = await pgclient.query(
       'SELECT u.email FROM USERS u JOIN PATIENTS p ON p.user_id = u.id WHERE p.id = $1',
       [patientId]
     );
@@ -93,7 +93,7 @@ const approveConsumer = asyncHandler(async (req, res) => {
  * @access  Private (ADMIN)
  */
 const getPendingCertifications = asyncHandler(async (req, res) => {
-  const result = await pool.query(
+  const result = await pgclient.query(
     `SELECT c.*, prov.name AS provider_name, prov.specialty, prov.clinic
      FROM CERTIFICATIONS c
      JOIN PROVIDERS prov ON prov.user_id = c.provider_id
@@ -118,7 +118,7 @@ const updateCertification = asyncHandler(async (req, res) => {
     throw new Error('Status must be Approved or Flagged');
   }
 
-  const result = await pool.query(
+  const result = await pgclient.query(
     'UPDATE CERTIFICATIONS SET status = $1 WHERE id = $2 RETURNING *',
     [status, id]
   );
@@ -137,7 +137,7 @@ const updateCertification = asyncHandler(async (req, res) => {
  * @access  Private (ADMIN)
  */
 const getAdmins = asyncHandler(async (req, res) => {
-  const result = await pool.query(
+  const result = await pgclient.query(
     `SELECT a.*, u.email 
      FROM ADMINS a
      JOIN USERS u ON u.id = a.user_id
@@ -153,7 +153,7 @@ const getAdmins = asyncHandler(async (req, res) => {
  * @access  Private (ADMIN)
  */
 const getProviderDirectory = asyncHandler(async (req, res) => {
-  const result = await pool.query(
+  const result = await pgclient.query(
     `SELECT prov.*, u.email,
             (SELECT COUNT(*) FROM PCP_ASSIGNMENTS WHERE provider_id = prov.user_id AND status = 'Approved') AS active_patients,
             (SELECT status FROM CERTIFICATIONS WHERE provider_id = prov.user_id ORDER BY date_submitted DESC LIMIT 1) AS cert_status
