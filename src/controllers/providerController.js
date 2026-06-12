@@ -102,6 +102,29 @@ const getMyPatients = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc    Get historical clinical logs for this provider
+ * @route   GET /api/providers/clinical-logs
+ * @access  Private (PROVIDER)
+ */
+const getMyClinicalLogs = asyncHandler(async (req, res) => {
+  const result = await pgclient.query(
+    `SELECT mr.id, mr.record_date AS date, mr.diagnosis, mr.icd_code AS "icdCode", 
+            mr.prescription AS "billingCode", pat.name AS "patientName",
+            COALESCE(
+              (SELECT c.status FROM CLAIMS c 
+               WHERE c.patient_id = mr.patient_id AND c.claim_date = mr.record_date AND c.provider_id = mr.provider_id 
+               LIMIT 1), 
+            'Pending') AS "claimStatus"
+     FROM MEDICAL_RECORDS mr
+     JOIN PATIENTS pat ON pat.id = mr.patient_id
+     WHERE mr.provider_id = $1
+     ORDER BY mr.record_date DESC`,
+    [req.user.id]
+  );
+  res.json(result.rows);
+});
+
+/**
  * @desc    Submit a clinical log (medical record) for a patient
  * @route   POST /api/providers/clinical-log
  * @access  Private (PROVIDER)
@@ -192,6 +215,51 @@ const submitClaim = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc    Get all claims assigned to this provider
+ * @route   GET /api/providers/claims
+ * @access  Private (PROVIDER)
+ */
+const getProviderClaims = asyncHandler(async (req, res) => {
+  const result = await pgclient.query(
+    `SELECT c.*, p.name AS patient_name, ic.name AS insurance_company
+     FROM CLAIMS c
+     JOIN PATIENTS p ON c.patient_id = p.id
+     LEFT JOIN INSURANCE_COMPANIES ic ON p.insurance_company_id = ic.id
+     WHERE c.provider_id = $1
+     ORDER BY c.claim_date DESC`,
+    [req.user.id]
+  );
+  res.json(result.rows);
+});
+
+/**
+ * @desc    Verify or reject a claim (Provider step)
+ * @route   PUT /api/providers/claims/:id/verify
+ * @access  Private (PROVIDER)
+ */
+const verifyClaim = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body; // Expect 'In Review' or 'Rejected'
+
+  if (!['In Review', 'Rejected'].includes(status)) {
+    res.status(400);
+    throw new Error('Invalid status update. Must be "In Review" or "Rejected"');
+  }
+
+  const result = await pgclient.query(
+    `UPDATE CLAIMS SET status = $1 WHERE id = $2 AND provider_id = $3 RETURNING *`,
+    [status, id, req.user.id]
+  );
+
+  if (result.rows.length === 0) {
+    res.status(404);
+    throw new Error('Claim not found or unauthorized');
+  }
+
+  res.json(result.rows[0]);
+});
+
+/**
  * @desc    Verify patient coverage by national ID
  * @route   GET /api/providers/verify/:nationalId
  * @access  Private (PROVIDER)
@@ -240,4 +308,7 @@ module.exports = {
   submitClinicalLog,
   submitClaim,
   verifyCoverage,
+  getMyClinicalLogs,
+  getProviderClaims,
+  verifyClaim,
 };
