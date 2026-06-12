@@ -93,7 +93,125 @@ const getProfile = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Register a new Consumer (Family Pool)
+ * @route   POST /api/auth/register/consumer
+ * @access  Public
+ */
+const registerConsumer = asyncHandler(async (req, res) => {
+  const { name, email, phone, plan_type, relation, password } = req.body;
+
+  if (!name || !email || !password || !plan_type || !relation) {
+    res.status(400);
+    throw new Error('Please provide all required fields');
+  }
+
+  // Check if user exists
+  const userExists = await pgclient.query('SELECT id FROM USERS WHERE email = $1', [email]);
+  if (userExists.rows.length > 0) {
+    res.status(400);
+    throw new Error('Email already registered');
+  }
+
+  // Hash password
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
+
+  try {
+    await pgclient.query('BEGIN');
+
+    // 1. Insert User
+    const userResult = await pgclient.query(
+      'INSERT INTO USERS (email, password_hash, role) VALUES ($1, $2, $3) RETURNING id, email, role',
+      [email, hashedPassword, 'CONSUMER']
+    );
+    const userId = userResult.rows[0].id;
+
+    // 2. Insert Patient (Consumer Profile)
+    // Note: Generating a random national_id for demo purposes if not provided, since it is required & unique.
+    const nationalId = `NID-${Math.floor(Math.random() * 100000000)}`;
+    
+    await pgclient.query(
+      `INSERT INTO PATIENTS (user_id, name, relation, national_id, plan_type, approval_status) 
+       VALUES ($1, $2, $3, $4, $5, 'Pending')`,
+      [userId, name, relation, nationalId, plan_type]
+    );
+
+    await pgclient.query('COMMIT');
+
+    res.status(201).json({
+      message: 'Consumer registration submitted successfully. Pending administrative review.',
+    });
+  } catch (error) {
+    await pgclient.query('ROLLBACK');
+    res.status(500);
+    throw new Error('Failed to register consumer: ' + error.message);
+  }
+});
+
+/**
+ * @desc    Register a new Provider (Clinic/Doctor)
+ * @route   POST /api/auth/register/provider
+ * @access  Public
+ */
+const registerProvider = asyncHandler(async (req, res) => {
+  const { name, email, phone, specialty, license_number, clinic, city, password } = req.body;
+
+  if (!name || !email || !password || !license_number || !clinic) {
+    res.status(400);
+    throw new Error('Please provide all required fields');
+  }
+
+  // Check if user exists
+  const userExists = await pgclient.query('SELECT id FROM USERS WHERE email = $1', [email]);
+  if (userExists.rows.length > 0) {
+    res.status(400);
+    throw new Error('Email already registered');
+  }
+
+  // Hash password
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
+
+  try {
+    await pgclient.query('BEGIN');
+
+    // 1. Insert User
+    const userResult = await pgclient.query(
+      'INSERT INTO USERS (email, password_hash, role) VALUES ($1, $2, $3) RETURNING id, email, role',
+      [email, hashedPassword, 'PROVIDER']
+    );
+    const userId = userResult.rows[0].id;
+
+    // 2. Insert Provider
+    await pgclient.query(
+      `INSERT INTO PROVIDERS (user_id, name, specialty, clinic, city) 
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, name, specialty, clinic, city]
+    );
+
+    // 3. Insert Certification
+    await pgclient.query(
+      `INSERT INTO CERTIFICATIONS (provider_id, license_number, status) 
+       VALUES ($1, $2, 'Pending Review')`,
+      [userId, license_number]
+    );
+
+    await pgclient.query('COMMIT');
+
+    res.status(201).json({
+      message: 'Provider registration submitted successfully. Pending JMA verification.',
+    });
+  } catch (error) {
+    await pgclient.query('ROLLBACK');
+    res.status(500);
+    throw new Error('Failed to register provider: ' + error.message);
+  }
+});
+
 module.exports = {
   loginUser,
-  getProfile
+  getProfile,
+  registerConsumer,
+  registerProvider
 };
