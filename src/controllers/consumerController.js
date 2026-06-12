@@ -254,6 +254,44 @@ const getCoverageRequests = asyncHandler(async (req, res) => {
   res.json(result.rows);
 });
 
+/**
+ * @desc    Submit a new reimbursement claim
+ * @route   POST /api/consumers/claims
+ * @access  Private (CONSUMER)
+ */
+const submitClaim = asyncHandler(async (req, res) => {
+  const { patient_id, provider_id, claim_date, amount } = req.body;
+
+  if (!patient_id || !provider_id || !claim_date || !amount) {
+    res.status(400);
+    throw new Error('Please provide patient_id, provider_id, claim_date, and amount');
+  }
+
+  // Verify patient belongs to this consumer
+  const patientCheck = await pgclient.query(
+    'SELECT id FROM PATIENTS WHERE id = $1 AND user_id = $2',
+    [patient_id, req.user.id]
+  );
+
+  if (patientCheck.rows.length === 0) {
+    res.status(403);
+    throw new Error('You can only submit claims for your own family members');
+  }
+
+  // Determine claim type (mock logic for now based on UI)
+  const claim_type = 'Outpatient Consultation';
+  const billing_code = 'OUT-99213';
+
+  // Insert claim
+  const result = await pgclient.query(
+    `INSERT INTO CLAIMS (patient_id, provider_id, claim_date, claim_type, billing_code, amount, status) 
+     VALUES ($1, $2, $3, $4, $5, $6, 'Pending') RETURNING *`,
+    [patient_id, provider_id, claim_date, claim_type, billing_code, amount]
+  );
+
+  res.status(201).json(result.rows[0]);
+});
+
 module.exports = {
   getFamily,
   getProviders,
@@ -263,4 +301,5 @@ module.exports = {
   getPCPHistory,
   submitCoverageRequest,
   getCoverageRequests,
+  submitClaim,
 };

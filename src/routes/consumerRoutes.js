@@ -10,6 +10,7 @@ const {
   getPCPHistory,
   submitCoverageRequest,
   getCoverageRequests,
+  submitClaim
 } = require('../controllers/consumerController');
 
 // All consumer routes require authentication + CONSUMER role
@@ -39,5 +40,8 @@ router.post('/coverage-request', submitCoverageRequest);
 
 // GET /api/consumers/coverage-requests
 router.get('/coverage-requests', getCoverageRequests);
+
+// POST /api/consumers/claims
+router.post('/claims', submitClaim);
 
 module.exports = router;
