@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect, authorize } = require('../middlewares/authMiddleware');
 const {
   getFamily,
+  addFamilyMember,
   getProviders,
   requestPCP,
   getMedicalRecords,
@@ -19,6 +20,9 @@ router.use(authorize('CONSUMER'));
 
 // GET /api/consumers/family
 router.get('/family', getFamily);
+
+// POST /api/consumers/family
+router.post('/family', addFamilyMember);
 
 // GET /api/consumers/providers?city=Amman&specialty=Cardiology&accepting_new=true
 router.get('/providers', getProviders);

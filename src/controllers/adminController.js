@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const pgclient = require('../config/db');
+const bcrypt = require('bcryptjs');
 const { sendWelcomeEmail } = require('../services/emailService');
 
 /**
@@ -145,6 +146,135 @@ const getAdmins = asyncHandler(async (req, res) => {
   );
 
   res.json(result.rows);
+});
+
+/**
+ * @desc    Add a new administrator
+ * @route   POST /api/admin/admins
+ * @access  Private (ADMIN)
+ */
+const addAdmin = asyncHandler(async (req, res) => {
+  const { name, role, email, status } = req.body;
+
+  if (!name || !role || !email) {
+    res.status(400);
+    throw new Error('Please provide name, role, and email');
+  }
+
+  // Check if user already exists
+  const userExists = await pgclient.query('SELECT * FROM USERS WHERE email = $1', [email]);
+  if (userExists.rows.length > 0) {
+    res.status(400);
+    throw new Error('User already exists');
+  }
+
+  // Hash default password
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash('Admin123!', salt);
+
+  try {
+    await pgclient.query('BEGIN');
+
+    // Insert user
+    const userResult = await pgclient.query(
+      'INSERT INTO USERS (email, password_hash, role) VALUES ($1, $2, $3) RETURNING id',
+      [email, hashedPassword, 'ADMIN']
+    );
+    const userId = userResult.rows[0].id;
+
+    // Insert admin
+    const adminResult = await pgclient.query(
+      'INSERT INTO ADMINS (user_id, name, admin_role, status) VALUES ($1, $2, $3, $4) RETURNING *',
+      [userId, name, role, status || 'Active']
+    );
+
+    await pgclient.query('COMMIT');
+
+    // Send mock welcome email
+    sendWelcomeEmail(email, name, 'Admin123!');
+
+    res.status(201).json({
+      ...adminResult.rows[0],
+      email: email
+    });
+  } catch (error) {
+    await pgclient.query('ROLLBACK');
+    throw error;
+  }
+});
+
+/**
+ * @desc    Update an administrator
+ * @route   PUT /api/admin/admins/:id
+ * @access  Private (ADMIN)
+ */
+const updateAdmin = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { name, role, email, status } = req.body;
+
+  try {
+    await pgclient.query('BEGIN');
+
+    // Update USERS table for email
+    if (email) {
+      await pgclient.query(
+        'UPDATE USERS SET email = $1 WHERE id = $2',
+        [email, id]
+      );
+    }
+
+    // Update ADMINS table
+    const adminResult = await pgclient.query(
+      `UPDATE ADMINS 
+       SET name = COALESCE($1, name), 
+           admin_role = COALESCE($2, admin_role), 
+           status = COALESCE($3, status) 
+       WHERE user_id = $4 RETURNING *`,
+      [name, role, status, id]
+    );
+
+    if (adminResult.rows.length === 0) {
+      await pgclient.query('ROLLBACK');
+      res.status(404);
+      throw new Error('Administrator not found');
+    }
+
+    await pgclient.query('COMMIT');
+
+    // Fetch the updated email as well
+    const finalResult = await pgclient.query(
+      `SELECT a.*, u.email 
+       FROM ADMINS a 
+       JOIN USERS u ON u.id = a.user_id 
+       WHERE a.user_id = $1`,
+      [id]
+    );
+
+    res.json(finalResult.rows[0]);
+  } catch (error) {
+    await pgclient.query('ROLLBACK');
+    throw error;
+  }
+});
+
+/**
+ * @desc    Delete an administrator
+ * @route   DELETE /api/admin/admins/:id
+ * @access  Private (ADMIN)
+ */
+const deleteAdmin = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  // Since USERS table is the parent and ADMINS has ON DELETE CASCADE,
+  // deleting from USERS will delete the admin record automatically.
+  const result = await pgclient.query('DELETE FROM USERS WHERE id = $1 RETURNING id', [id]);
+
+  if (result.rows.length === 0) {
+    res.status(404);
+    throw new Error('Administrator not found');
+  }
+
+  res.json({ message: 'Administrator removed successfully' });
 });
 
 /**
@@ -379,6 +509,11 @@ const processClaim = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  getDashboardStats,
+  getPendingConsumers,
+  approveConsumer,
+  getPendingCertifications,
+  updateCertification,
   getAdmins,
   getProviderDirectory,
   getCoverageRequests,
@@ -390,5 +525,8 @@ module.exports = {
   getAllConsumers,
   updateConsumerDetails,
   getAllClaims,
-  processClaim
+  processClaim,
+  addAdmin,
+  updateAdmin,
+  deleteAdmin
 };

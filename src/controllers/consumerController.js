@@ -27,6 +27,44 @@ const getFamily = asyncHandler(async (req, res) => {
   res.json(result.rows);
 });
 
+/** 
+ * @desc    Add a family member (dependent)
+ * @route   POST /api/consumers/family
+ * @access  Private (CONSUMER)
+ */
+const addFamilyMember = asyncHandler(async (req, res) => {
+  const { name, relation, dob, nationalId } = req.body;
+
+  if (!name || !relation || !dob || !nationalId) {
+    res.status(400);
+    throw new Error('Please provide all required fields');
+  }
+
+  // Get primary consumer's details to inherit plan
+  const primaryCheck = await pgclient.query(
+    'SELECT insurance_company_id, plan_type, network_tier FROM PATIENTS WHERE user_id = $1 AND relation = $2',
+    [req.user.id, 'Primary']
+  );
+
+  let insCompanyId = null;
+  let planType = 'MOH Basic';
+  let networkTier = null;
+
+  if (primaryCheck.rows.length > 0) {
+    insCompanyId = primaryCheck.rows[0].insurance_company_id;
+    planType = primaryCheck.rows[0].plan_type;
+    networkTier = primaryCheck.rows[0].network_tier;
+  }
+
+  const result = await pgclient.query(
+    `INSERT INTO PATIENTS (user_id, name, relation, dob, national_id, plan_type, insurance_company_id, network_tier, approval_status) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Pending') RETURNING *`,
+    [req.user.id, name, relation, dob, nationalId, planType, insCompanyId, networkTier]
+  );
+
+  res.status(201).json(result.rows[0]);
+});
+
 /**
  * @desc    Get all providers for the map directory
  * @route   GET /api/consumers/providers
@@ -294,6 +332,7 @@ const submitClaim = asyncHandler(async (req, res) => {
 
 module.exports = {
   getFamily,
+  addFamilyMember,
   getProviders,
   requestPCP,
   getMedicalRecords,

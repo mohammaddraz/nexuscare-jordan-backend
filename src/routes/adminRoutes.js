@@ -18,7 +18,10 @@ const {
   getAllConsumers,
   updateConsumerDetails,
   getAllClaims,
-  processClaim
+  processClaim,
+  addAdmin,
+  updateAdmin,
+  deleteAdmin
 } = require('../controllers/adminController');
 
 // All admin routes require authentication + ADMIN role
@@ -42,6 +45,15 @@ router.put('/certifications/:id', updateCertification);
 
 // GET /api/admin/admins
 router.get('/admins', getAdmins);
+
+// POST /api/admin/admins
+router.post('/admins', addAdmin);
+
+// PUT /api/admin/admins/:id
+router.put('/admins/:id', updateAdmin);
+
+// DELETE /api/admin/admins/:id
+router.delete('/admins/:id', deleteAdmin);
 
 // GET /api/admin/providers
 router.get('/providers', getProviderDirectory);
