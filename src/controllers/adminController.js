@@ -217,14 +217,178 @@ const updateCoverageRequest = asyncHandler(async (req, res) => {
   res.json(result.rows[0]);
 });
 
+/**
+ * @desc    Get all insurance companies
+ * @route   GET /api/admin/insurance-companies
+ * @access  Private (ADMIN)
+ */
+const getInsuranceCompanies = asyncHandler(async (req, res) => {
+  const result = await pgclient.query('SELECT * FROM INSURANCE_COMPANIES ORDER BY name ASC');
+  res.json(result.rows);
+});
+
+/**
+ * @desc    Get all provider networks (mappings)
+ * @route   GET /api/admin/provider-networks
+ * @access  Private (ADMIN)
+ */
+const getProviderNetworks = asyncHandler(async (req, res) => {
+  const result = await pgclient.query(`
+    SELECT pn.provider_id, pn.company_id, pn.accepted_tier,
+           p.name AS "providerName", p.specialty,
+           ic.name AS "companyName"
+    FROM PROVIDER_NETWORKS pn
+    JOIN PROVIDERS p ON p.user_id = pn.provider_id
+    JOIN INSURANCE_COMPANIES ic ON ic.id = pn.company_id
+  `);
+  res.json(result.rows);
+});
+
+/**
+ * @desc    Assign provider to network
+ * @route   POST /api/admin/provider-networks
+ * @access  Private (ADMIN)
+ */
+const assignProviderToNetwork = asyncHandler(async (req, res) => {
+  const { provider_id, company_id, accepted_tier } = req.body;
+
+  if (!provider_id || !company_id || !accepted_tier) {
+    res.status(400);
+    throw new Error('Please provide provider_id, company_id, and accepted_tier');
+  }
+
+  // Check if mapping exists
+  const exists = await pgclient.query(
+    'SELECT * FROM PROVIDER_NETWORKS WHERE provider_id = $1 AND company_id = $2',
+    [provider_id, company_id]
+  );
+
+  if (exists.rows.length > 0) {
+    res.status(400);
+    throw new Error('Provider is already assigned to this network. Please unassign first if you wish to change the tier.');
+  }
+
+  await pgclient.query(
+    'INSERT INTO PROVIDER_NETWORKS (provider_id, company_id, accepted_tier) VALUES ($1, $2, $3)',
+    [provider_id, company_id, accepted_tier]
+  );
+
+  res.status(201).json({ message: 'Provider successfully assigned to network' });
+});
+
+/**
+ * @desc    Remove provider from network
+ * @route   DELETE /api/admin/provider-networks/:provider_id/:company_id
+ * @access  Private (ADMIN)
+ */
+const removeProviderFromNetwork = asyncHandler(async (req, res) => {
+  const { provider_id, company_id } = req.params;
+
+  await pgclient.query(
+    'DELETE FROM PROVIDER_NETWORKS WHERE provider_id = $1 AND company_id = $2',
+    [provider_id, company_id]
+  );
+
+  res.json({ message: 'Provider successfully removed from network' });
+});
+
+/**
+ * @desc    Get all consumers (patients)
+ * @route   GET /api/admin/consumers
+ * @access  Private (ADMIN)
+ */
+const getAllConsumers = asyncHandler(async (req, res) => {
+  const result = await pgclient.query(`
+    SELECT p.*, ic.name AS "insurance_company_name"
+    FROM PATIENTS p
+    LEFT JOIN INSURANCE_COMPANIES ic ON ic.id = p.insurance_company_id
+    ORDER BY p.name ASC
+  `);
+  res.json(result.rows);
+});
+
+/**
+ * @desc    Update consumer details
+ * @route   PUT /api/admin/consumers/:id
+ * @access  Private (ADMIN)
+ */
+const updateConsumerDetails = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { approval_status, insurance_company_id, network_tier, plan_type } = req.body;
+
+  const result = await pgclient.query(
+    `UPDATE PATIENTS 
+     SET approval_status = COALESCE($1, approval_status),
+         insurance_company_id = COALESCE($2, insurance_company_id),
+         network_tier = COALESCE($3, network_tier),
+         plan_type = COALESCE($4, plan_type)
+     WHERE id = $5 
+     RETURNING *`,
+    [approval_status, insurance_company_id || null, network_tier, plan_type, id]
+  );
+
+  if (result.rows.length === 0) {
+    res.status(404);
+    throw new Error('Consumer not found');
+  }
+
+  res.json(result.rows[0]);
+});
+
+/**
+ * @desc    Get all claims
+ * @route   GET /api/admin/claims
+ * @access  Private (ADMIN)
+ */
+const getAllClaims = asyncHandler(async (req, res) => {
+  const result = await pgclient.query(
+    `SELECT c.*, p.name AS patient_name, pr.name AS provider_name
+     FROM CLAIMS c
+     JOIN PATIENTS p ON c.patient_id = p.id
+     JOIN PROVIDERS pr ON c.provider_id = pr.user_id
+     ORDER BY c.claim_date DESC`
+  );
+  res.json(result.rows);
+});
+
+/**
+ * @desc    Approve or Deny a claim (Admin step)
+ * @route   PUT /api/admin/claims/:id/process
+ * @access  Private (ADMIN)
+ */
+const processClaim = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body; // Expect 'Paid' or 'Rejected'
+
+  if (!['Paid', 'Rejected'].includes(status)) {
+    res.status(400);
+    throw new Error('Invalid status update. Must be "Paid" or "Rejected"');
+  }
+
+  const result = await pgclient.query(
+    `UPDATE CLAIMS SET status = $1 WHERE id = $2 RETURNING *`,
+    [status, id]
+  );
+
+  if (result.rows.length === 0) {
+    res.status(404);
+    throw new Error('Claim not found');
+  }
+
+  res.json(result.rows[0]);
+});
+
 module.exports = {
-  getDashboardStats,
-  getPendingConsumers,
-  approveConsumer,
-  getPendingCertifications,
-  updateCertification,
   getAdmins,
   getProviderDirectory,
   getCoverageRequests,
   updateCoverageRequest,
+  getInsuranceCompanies,
+  getProviderNetworks,
+  assignProviderToNetwork,
+  removeProviderFromNetwork,
+  getAllConsumers,
+  updateConsumerDetails,
+  getAllClaims,
+  processClaim
 };

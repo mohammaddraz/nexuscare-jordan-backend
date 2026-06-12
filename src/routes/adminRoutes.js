@@ -11,6 +11,14 @@ const {
   getProviderDirectory,
   getCoverageRequests,
   updateCoverageRequest,
+  getInsuranceCompanies,
+  getProviderNetworks,
+  assignProviderToNetwork,
+  removeProviderFromNetwork,
+  getAllConsumers,
+  updateConsumerDetails,
+  getAllClaims,
+  processClaim
 } = require('../controllers/adminController');
 
 // All admin routes require authentication + ADMIN role
@@ -43,5 +51,29 @@ router.get('/coverage-requests', getCoverageRequests);
 
 // PUT /api/admin/coverage-requests/:id
 router.put('/coverage-requests/:id', updateCoverageRequest);
+
+// GET /api/admin/insurance-companies
+router.get('/insurance-companies', getInsuranceCompanies);
+
+// GET /api/admin/provider-networks
+router.get('/provider-networks', getProviderNetworks);
+
+// POST /api/admin/provider-networks
+router.post('/provider-networks', assignProviderToNetwork);
+
+// DELETE /api/admin/provider-networks/:provider_id/:company_id
+router.delete('/provider-networks/:provider_id/:company_id', removeProviderFromNetwork);
+
+// GET /api/admin/consumers
+router.get('/consumers', getAllConsumers);
+
+// PUT /api/admin/consumers/:id
+router.put('/consumers/:id', updateConsumerDetails);
+
+// GET /api/admin/claims
+router.get('/claims', getAllClaims);
+
+// PUT /api/admin/claims/:id/process
+router.put('/claims/:id/process', processClaim);
 
 module.exports = router;
