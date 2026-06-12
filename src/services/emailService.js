@@ -26,23 +26,19 @@ const initTransporter = async () => {
       },
     });
   } else {
-    // Development: use Ethereal (fake emails captured in a web UI)
-    const testAccount = await nodemailer.createTestAccount();
-    transporter = nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    });
-    console.log(`📧 Ethereal Email Test Account: ${testAccount.user}`);
+    // Development: Mock transporter to prevent ETIMEDOUT crashes
+    transporter = {
+      sendMail: async (mailOptions) => {
+        console.log(`[Mock Email] Sending to ${mailOptions.to}: ${mailOptions.subject}`);
+        return { messageId: 'mock-id' };
+      }
+    };
+    console.log(`📧 Mock Email Transporter Initialized`);
   }
 };
 
 // Initialize on module load
-initTransporter().catch(console.error);
+initTransporter().catch(e => console.error('Email Init Error:', e.message));
 
 /**
  * Send a Welcome Email after consumer registration is approved

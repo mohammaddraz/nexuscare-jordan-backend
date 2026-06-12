@@ -157,10 +157,34 @@ const submitClaim = asyncHandler(async (req, res) => {
   res.status(201).json(result.rows[0]);
 });
 
+/**
+ * @desc    Verify patient coverage by national ID
+ * @route   GET /api/providers/verify/:nationalId
+ * @access  Private (PROVIDER)
+ */
+const verifyCoverage = asyncHandler(async (req, res) => {
+  const { nationalId } = req.params;
+
+  const result = await pool.query(
+    `SELECT name, plan_type, approval_status 
+     FROM PATIENTS 
+     WHERE national_id = $1`,
+    [nationalId]
+  );
+
+  if (result.rows.length === 0) {
+    res.status(404);
+    throw new Error('Patient not found');
+  }
+
+  res.json(result.rows[0]);
+});
+
 module.exports = {
   getPendingAssignments,
   updateAssignmentStatus,
   getMyPatients,
   submitClinicalLog,
   submitClaim,
+  verifyCoverage,
 };

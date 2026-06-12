@@ -1,13 +1,13 @@
 const asyncHandler = require('express-async-handler');
-const pool = require('../config/db');
+const pgclient = require('../config/db');
 
-/**
+/** 
  * @desc    Get all family members (dependents) for the logged-in consumer
  * @route   GET /api/consumers/family
  * @access  Private (CONSUMER)
  */
 const getFamily = asyncHandler(async (req, res) => {
-  const result = await pool.query(
+  const result = await pgclient.query(
     `SELECT p.*, 
             pca.status AS pcp_status,
             prov.name AS pcp_name,
@@ -50,7 +50,7 @@ const getProviders = asyncHandler(async (req, res) => {
 
   query += ` ORDER BY rating DESC`;
 
-  const result = await pool.query(query, params);
+  const result = await pgclient.query(query, params);
   res.json(result.rows);
 });
 
@@ -68,7 +68,7 @@ const requestPCP = asyncHandler(async (req, res) => {
   }
 
   // Verify that the patient belongs to this consumer
-  const patientCheck = await pool.query(
+  const patientCheck = await pgclient.query(
     'SELECT id FROM PATIENTS WHERE id = $1 AND user_id = $2',
     [patient_id, req.user.id]
   );
@@ -79,7 +79,7 @@ const requestPCP = asyncHandler(async (req, res) => {
   }
 
   // Create the PCP assignment request
-  const result = await pool.query(
+  const result = await pgclient.query(
     `INSERT INTO PCP_ASSIGNMENTS (patient_id, provider_id, status) 
      VALUES ($1, $2, 'Pending') RETURNING *`,
     [patient_id, provider_id]
@@ -97,7 +97,7 @@ const getMedicalRecords = asyncHandler(async (req, res) => {
   const { patientId } = req.params;
 
   // Verify patient belongs to this consumer
-  const patientCheck = await pool.query(
+  const patientCheck = await pgclient.query(
     'SELECT id FROM PATIENTS WHERE id = $1 AND user_id = $2',
     [patientId, req.user.id]
   );
@@ -107,7 +107,7 @@ const getMedicalRecords = asyncHandler(async (req, res) => {
     throw new Error('Access denied');
   }
 
-  const result = await pool.query(
+  const result = await pgclient.query(
     `SELECT mr.*, prov.name AS provider_name 
      FROM MEDICAL_RECORDS mr
      JOIN PROVIDERS prov ON prov.user_id = mr.provider_id
@@ -128,7 +128,7 @@ const getClaims = asyncHandler(async (req, res) => {
   const { patientId } = req.params;
 
   // Verify patient belongs to this consumer
-  const patientCheck = await pool.query(
+  const patientCheck = await pgclient.query(
     'SELECT id FROM PATIENTS WHERE id = $1 AND user_id = $2',
     [patientId, req.user.id]
   );
@@ -138,7 +138,7 @@ const getClaims = asyncHandler(async (req, res) => {
     throw new Error('Access denied');
   }
 
-  const result = await pool.query(
+  const result = await pgclient.query(
     `SELECT c.*, prov.name AS provider_name 
      FROM CLAIMS c
      JOIN PROVIDERS prov ON prov.user_id = c.provider_id
@@ -150,10 +150,31 @@ const getClaims = asyncHandler(async (req, res) => {
   res.json(result.rows);
 });
 
+/**
+ * @desc    Get PCP assignment history for all family members
+ * @route   GET /api/consumers/pcp-history
+ * @access  Private (CONSUMER)
+ */
+const getPCPHistory = asyncHandler(async (req, res) => {
+  const result = await pgclient.query(
+    `SELECT pca.id, pca.status, pca.date_requested,
+            pat.name AS patient_name,
+            prov.name AS provider_name
+     FROM PCP_ASSIGNMENTS pca
+     JOIN PATIENTS pat ON pat.id = pca.patient_id
+     JOIN PROVIDERS prov ON prov.user_id = pca.provider_id
+     WHERE pat.user_id = $1
+     ORDER BY pca.date_requested DESC`,
+    [req.user.id]
+  );
+  res.json(result.rows);
+});
+
 module.exports = {
   getFamily,
   getProviders,
   requestPCP,
   getMedicalRecords,
   getClaims,
+  getPCPHistory,
 };

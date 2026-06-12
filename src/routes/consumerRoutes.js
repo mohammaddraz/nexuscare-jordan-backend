@@ -7,6 +7,7 @@ const {
   requestPCP,
   getMedicalRecords,
   getClaims,
+  getPCPHistory,
 } = require('../controllers/consumerController');
 
 // All consumer routes require authentication + CONSUMER role
@@ -21,6 +22,9 @@ router.get('/providers', getProviders);
 
 // POST /api/consumers/pcp-request
 router.post('/pcp-request', requestPCP);
+
+// GET /api/consumers/pcp-history
+router.get('/pcp-history', getPCPHistory);
 
 // GET /api/consumers/records/:patientId
 router.get('/records/:patientId', getMedicalRecords);

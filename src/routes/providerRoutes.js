@@ -7,6 +7,7 @@ const {
   getMyPatients,
   submitClinicalLog,
   submitClaim,
+  verifyCoverage,
 } = require('../controllers/providerController');
 
 // All provider routes require authentication + PROVIDER role
@@ -27,5 +28,8 @@ router.post('/clinical-log', submitClinicalLog);
 
 // POST /api/providers/claims
 router.post('/claims', submitClaim);
+
+// GET /api/providers/verify/:nationalId
+router.get('/verify/:nationalId', verifyCoverage);
 
 module.exports = router;
