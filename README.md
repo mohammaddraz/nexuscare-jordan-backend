@@ -242,29 +242,29 @@ Authorization: Bearer <your_jwt_token>
 #### Consumer Management
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/admin/consumers` | List all consumers with approval status |
-| `GET` | `/api/admin/consumers/:id` | Get single consumer detail |
-| `PUT` | `/api/admin/consumers/:id` | Update consumer profile |
-| `PATCH` | `/api/admin/consumers/:id/approve` | Approve a pending consumer |
-| `PATCH` | `/api/admin/consumers/:id/reject` | Reject a pending consumer |
+| `GET` | `/api/admin/pending-consumers` | List all pending consumer registrations |
+| `PUT` | `/api/admin/approve-consumer/:patientId` | Approve or reject a pending consumer |
+| `GET` | `/api/admin/consumers` | List all consumers with insurance details |
+| `PUT` | `/api/admin/consumers/:id` | Update consumer profile (plan, tier, status) |
 
 #### Provider & Network Management
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/admin/providers` | List all providers |
+| `GET` | `/api/admin/providers` | List all providers with certification status |
 | `GET` | `/api/admin/certifications` | List all certification submissions |
-| `PATCH` | `/api/admin/certifications/:id` | Update certification status |
-| `GET` | `/api/admin/networks` | List all provider-insurer network entries |
-| `POST` | `/api/admin/networks` | Add provider to insurance network |
-| `DELETE` | `/api/admin/networks/:id` | Remove provider from network |
+| `PUT` | `/api/admin/certifications/:id` | Update certification status |
+| `GET` | `/api/admin/insurance-companies` | List all insurance companies |
+| `GET` | `/api/admin/provider-networks` | List all provider-insurer network entries |
+| `POST` | `/api/admin/provider-networks` | Assign provider to insurance network |
+| `DELETE` | `/api/admin/provider-networks/:provider_id/:company_id` | Remove provider from network |
 
 #### Claims & Coverage
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/admin/claims` | List all claims across the platform |
-| `PATCH` | `/api/admin/claims/:id` | Update claim status |
+| `PUT` | `/api/admin/claims/:id/process` | Process a claim (Paid / Rejected) |
 | `GET` | `/api/admin/coverage-requests` | List all coverage change requests |
-| `PATCH` | `/api/admin/coverage-requests/:id` | Process a coverage request |
+| `PUT` | `/api/admin/coverage-requests/:id` | Approve or reject a coverage request |
 
 #### Admin Account Management
 | Method | Endpoint | Description |
@@ -284,10 +284,8 @@ Authorization: Bearer <your_jwt_token>
 #### Family / Patient Management
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/consumers/patients` | Get all patients under this user account |
-| `POST` | `/api/consumers/patients` | Add a new family member (dependent) |
-| `PUT` | `/api/consumers/patients/:id` | Update a patient profile |
-| `DELETE` | `/api/consumers/patients/:id` | Remove a dependent |
+| `GET` | `/api/consumers/family` | Get all patients under this user account |
+| `POST` | `/api/consumers/family` | Add a new family member (dependent) |
 
 #### Provider Search
 | Method | Endpoint | Description | Query Params |
@@ -297,19 +295,20 @@ Authorization: Bearer <your_jwt_token>
 #### PCP Assignments
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/api/consumers/pcp-assignments` | Request a PCP assignment |
-| `GET` | `/api/consumers/pcp-assignments` | View PCP assignment status |
+| `POST` | `/api/consumers/pcp-request` | Request a PCP assignment |
+| `GET` | `/api/consumers/pcp-history` | View PCP assignment history |
 
 #### Medical Records
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/consumers/medical-records/:patientId` | View medical records for a patient |
+| `GET` | `/api/consumers/records/:patientId` | View medical records for a patient |
 
 #### Claims & Coverage
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/consumers/claims` | View all claims for this account |
-| `POST` | `/api/consumers/coverage-requests` | Submit a coverage change request |
+| `GET` | `/api/consumers/claims/:patientId` | View claims for a specific patient |
+| `POST` | `/api/consumers/claims` | Submit a new claim |
+| `POST` | `/api/consumers/coverage-request` | Submit a coverage change request |
 | `GET` | `/api/consumers/coverage-requests` | View submitted coverage requests |
 
 ---
@@ -319,41 +318,30 @@ Authorization: Bearer <your_jwt_token>
 **Base path:** `/api/providers`  
 **Auth required:** Yes — Role: `PROVIDER`
 
-#### Practice Management
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/providers/profile` | Get own provider profile |
-| `PUT` | `/api/providers/profile` | Update profile (specialty, city, coords, etc.) |
-
 #### Patient Management
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/providers/patients` | List enrolled patients |
-| `GET` | `/api/providers/patients/verify/:nationalId` | Verify a patient's coverage by National ID |
+| `GET` | `/api/providers/verify/:nationalId` | Verify a patient's coverage by National ID |
 
 #### PCP Assignments
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/providers/pcp-assignments` | List incoming PCP assignment requests |
-| `PATCH` | `/api/providers/pcp-assignments/:id` | Accept or reject an assignment |
+| `GET` | `/api/providers/assignments` | List incoming PCP assignment requests |
+| `PUT` | `/api/providers/assignments/:id` | Accept or reject an assignment |
 
 #### Clinical Logging
 | Method | Endpoint | Description | Body |
 |--------|----------|-------------|------|
-| `POST` | `/api/providers/medical-records` | Submit a clinical log | `{ patient_id, diagnosis, icd_code, prescription, notes }` |
-| `GET` | `/api/providers/medical-records/:patientId` | View records for a specific patient | — |
+| `POST` | `/api/providers/clinical-log` | Submit a clinical log | `{ patient_id, diagnosis, icd_code, prescription, notes }` |
+| `GET` | `/api/providers/clinical-logs` | View all clinical logs | — |
 
 #### Billing & Claims
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `POST` | `/api/providers/claims` | Submit a billing claim |
 | `GET` | `/api/providers/claims` | View all submitted claims |
-
-#### Certifications
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/providers/certifications` | Submit a licence for verification |
-| `GET` | `/api/providers/certifications` | View own certification status |
+| `PUT` | `/api/providers/claims/:id/verify` | Verify a claim (Provider review) |
 
 ---
 
