@@ -9,20 +9,19 @@ const { sendWelcomeEmail } = require('../services/emailService');
  * @access  Private (ADMIN)
  */
 const getDashboardStats = asyncHandler(async (req, res) => {
-  const [patients, providers, claims, pendingAssignments, pendingConsumers] = await Promise.all([
-    pgclient.query('SELECT COUNT(*) FROM PATIENTS WHERE approval_status = $1', ['Approved']),
-    pgclient.query('SELECT COUNT(*) FROM PROVIDERS'),
-    pgclient.query('SELECT COUNT(*) FROM CLAIMS'),
-    pgclient.query("SELECT COUNT(*) FROM PCP_ASSIGNMENTS WHERE status = 'Pending'"),
-    pgclient.query("SELECT COUNT(*) FROM PATIENTS WHERE approval_status = 'Pending'"),
-  ]);
+  // Execute queries sequentially to prevent concurrent connection conflict
+  const patients = await pgclient.query('SELECT COUNT(*) FROM PATIENTS WHERE approval_status = $1', ['Approved']);
+  const providers = await pgclient.query('SELECT COUNT(*) FROM PROVIDERS');
+  const claims = await pgclient.query('SELECT COUNT(*) FROM CLAIMS');
+  const pendingAssignments = await pgclient.query("SELECT COUNT(*) FROM PCP_ASSIGNMENTS WHERE status = 'Pending'");
+  const pendingConsumers = await pgclient.query("SELECT COUNT(*) FROM PATIENTS WHERE approval_status = 'Pending'");
 
   res.json({
-    totalPatients: parseInt(patients.rows[0].count),
-    totalProviders: parseInt(providers.rows[0].count),
-    totalClaims: parseInt(claims.rows[0].count),
-    pendingAssignments: parseInt(pendingAssignments.rows[0].count),
-    pendingConsumers: parseInt(pendingConsumers.rows[0].count),
+    totalPatients: parseInt(patients.rows[0].count, 10),
+    totalProviders: parseInt(providers.rows[0].count, 10),
+    totalClaims: parseInt(claims.rows[0].count, 10),
+    pendingAssignments: parseInt(pendingAssignments.rows[0].count, 10),
+    pendingConsumers: parseInt(pendingConsumers.rows[0].count, 10),
   });
 });
 
