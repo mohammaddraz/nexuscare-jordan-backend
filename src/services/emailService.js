@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 
 /**
- * Email Service for NexusCare Jordan
+ * Email Service for SehaGrid Jordan
  * Uses Nodemailer with SMTP transport (Gmail, Outlook, or any SMTP provider)
  * 
  * In development mode, uses Ethereal (fake SMTP) so no real emails are sent.
@@ -47,21 +47,21 @@ const sendWelcomeEmail = async (toEmail, consumerName, planType) => {
   if (!transporter) await initTransporter();
 
   const info = await transporter.sendMail({
-    from: '"NexusCare Jordan" <noreply@nexuscare.jo>',
+    from: '"SehaGrid Jordan" <noreply@sehagrid.jo>',
     to: toEmail,
-    subject: '🎉 Welcome to NexusCare Jordan — Your Account is Approved!',
+    subject: '🎉 Welcome to SehaGrid Jordan — Your Account is Approved!',
     html: `
       <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #e5e7eb; border-radius: 12px;">
         <h1 style="color: #131b2e;">Welcome, ${consumerName}!</h1>
         <p style="color: #64748b; font-size: 15px;">
-          Your NexusCare Jordan account has been <strong style="color: #10b981;">approved</strong> by the Ministry of Health.
+          Your SehaGrid Jordan account has been <strong style="color: #10b981;">approved</strong> by the Ministry of Health.
         </p>
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
         <p style="color: #334155; font-size: 14px;"><strong>Plan:</strong> ${planType}</p>
         <p style="color: #334155; font-size: 14px;">You can now log in, assign a Primary Care Provider for your family, and manage your coverage.</p>
         <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" 
            style="display: inline-block; margin-top: 20px; padding: 12px 24px; background: #131b2e; color: #34d399; text-decoration: none; border-radius: 8px; font-weight: 600;">
-          Log in to NexusCare
+          Log in to SehaGrid
         </a>
         <p style="color: #94a3b8; font-size: 12px; margin-top: 30px;">
           Ministry of Health — Kingdom of Jordan
@@ -84,9 +84,9 @@ const sendPCPStatusEmail = async (toEmail, patientName, providerName, status) =>
   const statusEmoji = status === 'Approved' ? '✅' : '❌';
 
   const info = await transporter.sendMail({
-    from: '"NexusCare Jordan" <noreply@nexuscare.jo>',
+    from: '"SehaGrid Jordan" <noreply@sehagrid.jo>',
     to: toEmail,
-    subject: `${statusEmoji} PCP Assignment ${status} — NexusCare Jordan`,
+    subject: `${statusEmoji} PCP Assignment ${status} — SehaGrid Jordan`,
     html: `
       <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #e5e7eb; border-radius: 12px;">
         <h2 style="color: #131b2e;">PCP Assignment Update</h2>

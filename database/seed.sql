@@ -1,4 +1,4 @@
--- NexusCare Jordan Backend Database Seed Data
+-- SehaGrid Jordan Backend Database Seed Data
 -- Run this script AFTER schema.sql to populate initial mock data.
 
 -- We will use pgcrypto to hash the passwords

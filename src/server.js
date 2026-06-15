@@ -21,7 +21,7 @@ app.use('/api/admin', adminRoutes);
 
 // Health Check Route
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'success', message: 'NexusCare Backend is running successfully!' });
+  res.status(200).json({ status: 'success', message: 'SehaGrid Backend is running successfully!' });
 });
 
 // Start Server

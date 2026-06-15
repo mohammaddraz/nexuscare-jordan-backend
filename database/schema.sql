@@ -1,4 +1,4 @@
--- NexusCare Jordan Backend Database Schema
+-- SehaGrid Jordan Backend Database Schema
 -- Run this script to initialize the PostgreSQL database tables.
 
 -- Enable UUID extension

@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🏥 NexusCare Jordan — Backend API
+# 🏥 SehaGrid Jordan — Backend API
 
 **A multi-role, insurance-aware healthcare management REST API**  
 Built with Node.js · Express.js · PostgreSQL · JWT Authentication
@@ -35,7 +35,7 @@ Built with Node.js · Express.js · PostgreSQL · JWT Authentication
 
 ## Overview
 
-NexusCare Jordan Backend is a RESTful API that powers a multi-role healthcare management platform for the Jordanian insurance market. It connects three user roles — **Insurance Administrators**, **Healthcare Providers**, and **Consumers** (insured individuals + dependents) — within a single, unified system.
+SehaGrid Jordan Backend is a RESTful API that powers a multi-role healthcare management platform for the Jordanian insurance market. It connects three user roles — **Insurance Administrators**, **Healthcare Providers**, and **Consumers** (insured individuals + dependents) — within a single, unified system.
 
 Key capabilities:
 - 🔐 JWT-based authentication with role-based access control (RBAC)
@@ -65,7 +65,7 @@ Key capabilities:
 ## Project Structure
 
 ```
-nexuscare-jordan-backend/
+sehagrid-jordan-backend/
 ├── src/
 │   ├── config/
 │   │   └── db.js                 # PostgreSQL client configuration
@@ -108,8 +108,8 @@ nexuscare-jordan-backend/
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/mohammaddraz/nexuscare-jordan-backend.git
-cd nexuscare-jordan-backend
+git clone https://github.com/mohammaddraz/sehagrid-jordan-backend.git
+cd sehagrid-jordan-backend
 
 # 2. Checkout develop branch
 git checkout develop
@@ -122,8 +122,8 @@ cp .env.sample .env
 # Edit .env with your values (see Environment Variables section)
 
 # 5. Set up the database
-psql -U postgres -c "CREATE DATABASE nexuscare;"
-psql -U postgres -d nexuscare -f database/schema.sql
+psql -U postgres -c "CREATE DATABASE sehagrid;"
+psql -U postgres -d sehagrid -f database/schema.sql
 
 # 6. Start development server
 npm run dev
@@ -144,7 +144,7 @@ PORT=5000
 # PostgreSQL Database
 DB_USER=postgres
 DB_HOST=localhost
-DB_DATABASE=nexuscare
+DB_DATABASE=sehagrid
 DB_PASSWORD=your_postgres_password
 DB_PORT=5433
 

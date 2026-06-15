@@ -10,9 +10,9 @@ const pgclient = new Client({
 });
 
 pgclient.connect()
-  .then(() => console.log('✅ Connected to PostgreSQL'))
+  .then(() => console.log('Connected to PostgreSQL'))
   .catch((err) => {
-    console.error('❌ PostgreSQL connection error:', err);
+    console.error('PostgreSQL connection error:', err);
     process.exit(-1);
   });
 
