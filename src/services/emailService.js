@@ -11,29 +11,33 @@ let transporter;
 
 /**
  * Initialize the email transporter
- * Uses real SMTP in production, Ethereal (test) in development
+ * Uses real SMTP (e.g. Mailtrap) when credentials are present, otherwise mocks.
  */
 const initTransporter = async () => {
-  if (process.env.NODE_ENV === 'production' && process.env.EMAIL_HOST) {
-    // Production: use real SMTP credentials from .env
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+
+  if (smtpHost && smtpUser && smtpPass && smtpUser !== 'your_mailtrap_user') {
+    // Real SMTP (Mailtrap or any provider)
     transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: process.env.EMAIL_PORT || 587,
-      secure: false,
+      host: smtpHost,
+      port: parseInt(process.env.SMTP_PORT, 10) || 2525,
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: smtpUser,
+        pass: smtpPass,
       },
     });
+    console.log(`📧 SMTP Email Transporter Initialized (${smtpHost})`);
   } else {
-    // Development: Mock transporter to prevent ETIMEDOUT crashes
+    // No credentials — use mock transporter so the app doesn't crash
     transporter = {
       sendMail: async (mailOptions) => {
-        console.log(`[Mock Email] Sending to ${mailOptions.to}: ${mailOptions.subject}`);
+        console.log(`[Mock Email] To: ${mailOptions.to} | Subject: ${mailOptions.subject}`);
         return { messageId: 'mock-id' };
       }
     };
-    console.log(`📧 Mock Email Transporter Initialized`);
+    console.log(`📧 Mock Email Transporter Initialized (set SMTP_USER/SMTP_PASS in .env to enable real emails)`);
   }
 };
 
