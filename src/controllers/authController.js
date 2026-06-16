@@ -155,7 +155,7 @@ const registerConsumer = asyncHandler(async (req, res) => {
  * @access  Public
  */
 const registerProvider = asyncHandler(async (req, res) => {
-  const { name, email, phone, specialty, license_number, clinic, city, password } = req.body;
+  const { name, email, phone, specialty, license_number, clinic, city, password, lat, lng } = req.body;
 
   if (!name || !email || !password || !license_number || !clinic) {
     res.status(400);
@@ -185,9 +185,9 @@ const registerProvider = asyncHandler(async (req, res) => {
 
     // 2. Insert Provider
     await pgclient.query(
-      `INSERT INTO PROVIDERS (user_id, name, specialty, clinic, city) 
-       VALUES ($1, $2, $3, $4, $5)`,
-      [userId, name, specialty, clinic, city]
+      `INSERT INTO PROVIDERS (user_id, name, specialty, clinic, city, lat, lng) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [userId, name, specialty, clinic, city, lat || null, lng || null]
     );
 
     // 3. Insert Certification
