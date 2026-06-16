@@ -295,6 +295,36 @@ const getProviderDirectory = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc    Update provider details
+ * @route   PUT /api/admin/providers/:id
+ * @access  Private (ADMIN)
+ */
+const updateProviderDetails = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { name, specialty, clinic, city, lat, lng } = req.body;
+
+  const result = await pgclient.query(
+    `UPDATE PROVIDERS 
+     SET name = COALESCE($1, name),
+         specialty = COALESCE($2, specialty),
+         clinic = COALESCE($3, clinic),
+         city = COALESCE($4, city),
+         lat = COALESCE($5, lat),
+         lng = COALESCE($6, lng)
+     WHERE user_id = $7 
+     RETURNING *`,
+    [name, specialty, clinic, city, lat !== undefined ? lat : null, lng !== undefined ? lng : null, id]
+  );
+
+  if (result.rows.length === 0) {
+    res.status(404);
+    throw new Error('Provider not found');
+  }
+
+  res.json(result.rows[0]);
+});
+
+/**
  * @desc    Get all coverage modification requests
  * @route   GET /api/admin/coverage-requests
  * @access  Private (ADMIN)
@@ -515,6 +545,7 @@ module.exports = {
   updateCertification,
   getAdmins,
   getProviderDirectory,
+  updateProviderDetails,
   getCoverageRequests,
   updateCoverageRequest,
   getInsuranceCompanies,

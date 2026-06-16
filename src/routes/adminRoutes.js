@@ -9,6 +9,7 @@ const {
   updateCertification,
   getAdmins,
   getProviderDirectory,
+  updateProviderDetails,
   getCoverageRequests,
   updateCoverageRequest,
   getInsuranceCompanies,
@@ -57,6 +58,9 @@ router.delete('/admins/:id', deleteAdmin);
 
 // GET /api/admin/providers
 router.get('/providers', getProviderDirectory);
+
+// PUT /api/admin/providers/:id
+router.put('/providers/:id', updateProviderDetails);
 
 // GET /api/admin/coverage-requests
 router.get('/coverage-requests', getCoverageRequests);

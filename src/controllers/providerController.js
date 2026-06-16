@@ -301,6 +301,31 @@ const verifyCoverage = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Update provider's own profile (e.g. coordinates)
+ * @route   PUT /api/providers/profile
+ * @access  Private (PROVIDER)
+ */
+const updateMyProfile = asyncHandler(async (req, res) => {
+  const { lat, lng } = req.body;
+
+  const result = await pgclient.query(
+    `UPDATE PROVIDERS 
+     SET lat = COALESCE($1, lat),
+         lng = COALESCE($2, lng)
+     WHERE user_id = $3 
+     RETURNING *`,
+    [lat !== undefined ? lat : null, lng !== undefined ? lng : null, req.user.id]
+  );
+
+  if (result.rows.length === 0) {
+    res.status(404);
+    throw new Error('Provider profile not found');
+  }
+
+  res.json(result.rows[0]);
+});
+
 module.exports = {
   getPendingAssignments,
   updateAssignmentStatus,
@@ -311,4 +336,5 @@ module.exports = {
   getMyClinicalLogs,
   getProviderClaims,
   verifyClaim,
+  updateMyProfile,
 };

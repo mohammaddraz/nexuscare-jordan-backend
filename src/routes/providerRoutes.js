@@ -10,7 +10,8 @@ const {
   verifyCoverage,
   getMyClinicalLogs,
   getProviderClaims,
-  verifyClaim
+  verifyClaim,
+  updateMyProfile
 } = require('../controllers/providerController');
 
 // All provider routes require authentication + PROVIDER role
@@ -43,5 +44,8 @@ router.get('/claims', getProviderClaims);
 
 // PUT /api/providers/claims/:id/verify
 router.put('/claims/:id/verify', verifyClaim);
+
+// PUT /api/providers/profile
+router.put('/profile', updateMyProfile);
 
 module.exports = router;
