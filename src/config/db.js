@@ -1,19 +1,27 @@
-const { Pool } = require('pg');
+const { Client } = require('pg');
 require('dotenv').config();
 
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_DATABASE,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-});
+// Railway provides DATABASE_URL; local dev uses individual DB_* vars
+const connectionConfig = process.env.DATABASE_URL
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+    }
+  : {
+      user: process.env.DB_USER,
+      host: process.env.DB_HOST,
+      database: process.env.DB_DATABASE,
+      password: process.env.DB_PASSWORD,
+      port: process.env.DB_PORT,
+    };
 
-pool.on('error', (err, client) => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
-});
+const pgclient = new Client(connectionConfig);
 
-module.exports = {
-  query: (text, params) => pool.query(text, params),
-};
+pgclient.connect()
+  .then(() => console.log('Connected to PostgreSQL'))
+  .catch((err) => {
+    console.error('PostgreSQL connection error:', err);
+    process.exit(-1);
+  });
+
+module.exports = pgclient;
