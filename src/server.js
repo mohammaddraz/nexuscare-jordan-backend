@@ -24,6 +24,11 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'success', message: 'SehaGrid Backend is running successfully!' });
 });
 
+// Root Route (to prevent "Cannot GET /" when clicking the Railway link)
+app.get('/', (req, res) => {
+  res.send('<h1>SehaGrid API is live!</h1><p>Send requests to <code>/api/...</code></p>');
+});
+
 // Start Server
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
